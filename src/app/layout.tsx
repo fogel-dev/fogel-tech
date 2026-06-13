@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from "next";
 import { cookies, headers } from "next/headers";
-import { Geist, Geist_Mono } from "next/font/google";
 
 import { dictionaries, type Locale } from "@/content/home";
 import {
@@ -10,16 +9,6 @@ import {
 import { TooltipProvider } from "@/shared/ui/tooltip";
 
 import "./globals.css";
-
-const geist = Geist({
-  variable: "--font-geist",
-  subsets: ["latin", "cyrillic"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin", "cyrillic"],
-});
 
 export const metadata: Metadata = {
   title: dictionaries.ru.meta.title,
@@ -58,7 +47,6 @@ export default async function RootLayout({
       lang={initialLocale}
       data-theme={initialTheme}
       suppressHydrationWarning
-      className={`${geist.variable} ${geistMono.variable}`}
     >
       <body className="font-sans antialiased">
         <PreferencesProvider

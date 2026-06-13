@@ -11,6 +11,7 @@ import { Separator } from "@/shared/ui/separator";
 import { ProjectCard } from "@/widgets/project-card";
 import { SectionHeading } from "@/widgets/section-heading";
 import { SiteHeader } from "@/widgets/site-header";
+import { DigitalCore } from "@/widgets/digital-core";
 
 export function HomePage() {
   const { dictionary } = usePreferences();
@@ -79,6 +80,7 @@ export function HomePage() {
     <>
       <SiteHeader />
       <div className="site-noise" aria-hidden="true" />
+      <DigitalCore />
 
       <main id="top" className="relative z-10">
         <section

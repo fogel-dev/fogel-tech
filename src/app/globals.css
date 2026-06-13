@@ -18,6 +18,8 @@
 }
 
 :root {
+  --font-geist: "Helvetica Neue", "Segoe UI", Arial, sans-serif;
+  --font-geist-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   --background: #ede9df;
   --foreground: #161711;
   --surface: rgba(247, 244, 235, 0.72);
@@ -132,6 +134,84 @@ body {
   padding-block: clamp(7rem, 14vw, 13rem);
 }
 
+.digital-core {
+  position: fixed;
+  z-index: 0;
+  top: 5rem;
+  right: -8vw;
+  width: min(62vw, 58rem);
+  height: calc(100svh - 5rem);
+  pointer-events: none;
+  opacity: 0.9;
+  mask-image: radial-gradient(ellipse 65% 72% at 50% 50%, black 46%, transparent 88%);
+}
+
+.digital-core::before,
+.digital-core::after {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  inset: 13% 10%;
+  border: 1px solid color-mix(in srgb, var(--scene-primary) 17%, transparent);
+  border-radius: 50%;
+}
+
+.digital-core::after {
+  inset: 21% 18%;
+  border-style: dashed;
+  animation: core-spin 34s linear infinite reverse;
+}
+
+.digital-core__hud {
+  position: absolute;
+  z-index: 3;
+  top: 17%;
+  right: 13%;
+  left: 13%;
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-geist-mono);
+  font-size: 0.58rem;
+  letter-spacing: 0.16em;
+  color: var(--muted-foreground);
+}
+
+.digital-core__fallback {
+  position: absolute;
+  inset: 22%;
+  display: grid;
+  place-items: center;
+  animation: core-spin 28s linear infinite;
+}
+
+.digital-core__fallback div {
+  position: absolute;
+  width: 100%;
+  aspect-ratio: 1;
+  border: 1px solid var(--scene-primary);
+  border-radius: 50%;
+  opacity: 0.28;
+}
+
+.digital-core__fallback div:nth-child(2) {
+  width: 68%;
+  border-style: dashed;
+  transform: rotateX(66deg);
+}
+
+.digital-core__fallback div:nth-child(3) {
+  width: 42%;
+  border-radius: 0;
+  transform: rotate(45deg);
+  background: color-mix(in srgb, var(--scene-primary) 8%, transparent);
+}
+
+@keyframes core-spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
 .reveal-line {
   display: block;
   overflow: hidden;
@@ -213,5 +293,33 @@ body {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+@media (max-width: 1023px) {
+  .digital-core {
+    top: 10vh;
+    right: -26vw;
+    width: 95vw;
+    height: 70vh;
+    opacity: 0.52;
+  }
+}
+
+@media (max-width: 640px) {
+  body {
+    background-size: 3rem 3rem;
+  }
+
+  .digital-core {
+    top: 7rem;
+    right: -48vw;
+    width: 125vw;
+    height: 62vh;
+    opacity: 0.42;
+  }
+
+  .digital-core__hud {
+    display: none;
   }
 }

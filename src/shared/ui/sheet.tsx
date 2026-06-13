@@ -19,6 +19,7 @@ function SheetContent({
     <DialogPrimitive.Portal>
       <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-background/70 backdrop-blur-md" />
       <DialogPrimitive.Content
+        aria-describedby={undefined}
         className={cn(
           "fixed inset-y-0 right-0 z-50 flex w-[min(88vw,24rem)] flex-col border-l border-border bg-background p-6 shadow-2xl",
           className,

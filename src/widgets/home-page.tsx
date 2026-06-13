@@ -92,19 +92,19 @@ export function HomePage() {
               <div className="reveal-line mb-8">
                 <p
                   data-hero-reveal
-                  className="font-mono text-[0.68rem] uppercase tracking-[0.2em] text-accent opacity-0"
+                  className="font-mono text-[0.68rem] uppercase tracking-[0.2em] text-accent"
                 >
                   {dictionary.hero.eyebrow}
                 </p>
               </div>
               <h1 className="text-[clamp(3.5rem,10.4vw,10rem)] font-semibold leading-[0.83] tracking-[-0.075em]">
                 <span className="reveal-line">
-                  <span data-hero-reveal className="opacity-0">
+                  <span data-hero-reveal>
                     {dictionary.hero.titleLead}
                   </span>
                 </span>
                 <span className="reveal-line pb-[0.12em] text-accent">
-                  <span data-hero-reveal className="opacity-0">
+                  <span data-hero-reveal>
                     {dictionary.hero.titleAccent}
                   </span>
                 </span>
@@ -115,7 +115,7 @@ export function HomePage() {
               <div className="reveal-line">
                 <p
                   data-hero-reveal
-                  className="max-w-xl text-lg leading-8 text-muted-foreground opacity-0 md:text-xl"
+                  className="max-w-xl text-lg leading-8 text-muted-foreground md:text-xl"
                 >
                   {dictionary.hero.description}
                 </p>
@@ -123,7 +123,7 @@ export function HomePage() {
               <div className="reveal-line">
                 <div
                   data-hero-reveal
-                  className="flex flex-wrap gap-3 opacity-0"
+                  className="flex flex-wrap gap-3"
                 >
                   <Button asChild size="lg">
                     <a href="#work">
@@ -139,7 +139,7 @@ export function HomePage() {
               <div className="reveal-line">
                 <div
                   data-hero-reveal
-                  className="flex items-center gap-3 font-mono text-[0.65rem] uppercase tracking-[0.18em] text-muted-foreground opacity-0"
+                  className="flex items-center gap-3 font-mono text-[0.65rem] uppercase tracking-[0.18em] text-muted-foreground"
                 >
                   <span className="relative flex size-2">
                     <span className="absolute inline-flex size-full animate-ping rounded-full bg-accent opacity-60" />
@@ -169,14 +169,14 @@ export function HomePage() {
           <div data-reveal-group className="grid gap-14 lg:grid-cols-12">
             <p
               data-reveal
-              className="font-mono text-[0.68rem] uppercase tracking-[0.2em] text-accent opacity-0 lg:col-span-3"
+              className="font-mono text-[0.68rem] uppercase tracking-[0.2em] text-accent lg:col-span-3"
             >
               {dictionary.statement.eyebrow}
             </p>
             <div className="lg:col-span-9">
               <p
                 data-reveal
-                className="text-balance text-[clamp(2.7rem,7vw,7rem)] font-semibold leading-[0.94] tracking-[-0.065em] opacity-0"
+                className="text-balance text-[clamp(2.7rem,7vw,7rem)] font-semibold leading-[0.94] tracking-[-0.065em]"
               >
                 {dictionary.statement.lineOne}
                 <span className="block text-muted-foreground">
@@ -187,14 +187,14 @@ export function HomePage() {
                 <div />
                 <p
                   data-reveal
-                  className="max-w-2xl text-lg leading-8 text-muted-foreground opacity-0"
+                  className="max-w-2xl text-lg leading-8 text-muted-foreground"
                 >
                   {dictionary.statement.description}
                 </p>
               </div>
               <div className="mt-20 grid gap-8 border-t border-border pt-8 sm:grid-cols-3">
                 {dictionary.statement.metrics.map((metric) => (
-                  <div data-reveal className="opacity-0" key={metric.label}>
+                  <div data-reveal key={metric.label}>
                     <p className="text-5xl font-semibold tracking-[-0.06em]">
                       {metric.value}
                     </p>
@@ -242,7 +242,7 @@ export function HomePage() {
               <article
                 data-reveal
                 key={item.number}
-                className="group grid gap-6 border-b border-border py-10 opacity-0 md:grid-cols-[5rem_1fr_1.2fr]"
+                className="group grid gap-6 border-b border-border py-10 md:grid-cols-[5rem_1fr_1.2fr]"
               >
                 <span className="font-mono text-[0.65rem] text-accent">
                   / {item.number}
@@ -291,23 +291,23 @@ export function HomePage() {
           className="page-shell flex min-h-[95vh] flex-col justify-end pb-8 pt-36"
         >
           <div data-reveal-group>
-            <Badge data-reveal className="mb-8 opacity-0">
+            <Badge data-reveal className="mb-8">
               {dictionary.contact.eyebrow}
             </Badge>
             <h2
               data-reveal
-              className="max-w-6xl text-balance text-[clamp(3.4rem,9vw,9rem)] font-semibold leading-[0.88] tracking-[-0.075em] opacity-0"
+              className="max-w-6xl text-balance text-[clamp(3.4rem,9vw,9rem)] font-semibold leading-[0.88] tracking-[-0.075em]"
             >
               {dictionary.contact.title}
             </h2>
             <div className="mt-16 grid gap-10 lg:grid-cols-2 lg:items-end">
               <p
                 data-reveal
-                className="max-w-xl text-lg leading-8 text-muted-foreground opacity-0"
+                className="max-w-xl text-lg leading-8 text-muted-foreground"
               >
                 {dictionary.contact.description}
               </p>
-              <div data-reveal className="opacity-0 lg:text-right">
+              <div data-reveal className="lg:text-right">
                 <button
                   type="button"
                   onClick={copyEmail}

@@ -52,6 +52,7 @@ export default async function RootLayout({
         <PreferencesProvider
           initialLocale={initialLocale}
           initialTheme={initialTheme}
+          hasStoredTheme={themeCookie === "light" || themeCookie === "dark"}
         >
           <TooltipProvider delayDuration={300}>{children}</TooltipProvider>
         </PreferencesProvider>

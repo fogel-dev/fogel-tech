@@ -35,18 +35,23 @@ export function PreferencesProvider({
   children,
   initialLocale,
   initialTheme,
+  hasStoredTheme,
 }: {
   children: ReactNode;
   initialLocale: Locale;
   initialTheme: Theme;
+  hasStoredTheme: boolean;
 }) {
   const [locale, setLocaleState] = useState(initialLocale);
   const [theme, setTheme] = useState(initialTheme);
+  const [hasManualTheme, setHasManualTheme] = useState(hasStoredTheme);
 
-  const applyTheme = useCallback((nextTheme: Theme) => {
+  const applyTheme = useCallback((nextTheme: Theme, persist = true) => {
     document.documentElement.dataset.theme = nextTheme;
     document.documentElement.style.colorScheme = nextTheme;
-    document.cookie = `theme=${nextTheme}; path=/; max-age=31536000; samesite=lax`;
+    if (persist) {
+      document.cookie = `theme=${nextTheme}; path=/; max-age=31536000; samesite=lax`;
+    }
     setTheme(nextTheme);
   }, []);
 
@@ -57,6 +62,7 @@ export function PreferencesProvider({
       const reduceMotion = window.matchMedia(
         "(prefers-reduced-motion: reduce)",
       ).matches;
+      setHasManualTheme(true);
 
       if (!doc.startViewTransition || reduceMotion) {
         applyTheme(nextTheme);
@@ -106,6 +112,19 @@ export function PreferencesProvider({
     document.documentElement.lang = locale;
     document.documentElement.dataset.theme = theme;
   }, [locale, theme]);
+
+  useEffect(() => {
+    if (hasManualTheme) return;
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    const applySystemTheme = () =>
+      applyTheme(media.matches ? "dark" : "light", false);
+    const frame = window.requestAnimationFrame(applySystemTheme);
+    media.addEventListener("change", applySystemTheme);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      media.removeEventListener("change", applySystemTheme);
+    };
+  }, [applyTheme, hasManualTheme]);
 
   const value = useMemo(
     () => ({

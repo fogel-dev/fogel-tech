@@ -1,299 +1,250 @@
 "use client";
 
 import { Canvas, useFrame } from "@react-three/fiber";
-import { Float, Line } from "@react-three/drei";
+import { Line } from "@react-three/drei";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 
 import { usePreferences } from "@/features/preferences/preferences-provider";
 
-const POINT_COUNT = 620;
-const SHAPE_COUNT = 6;
+const vertexShader = `
+  uniform float uTime;
+  uniform float uProgress;
+  varying vec3 vNormal;
+  varying vec3 vPosition;
+  varying float vDistortion;
 
-type PointSeed = {
-  a: number;
-  b: number;
-  c: number;
-  radius: number;
-};
+  void main() {
+    vec3 p = position;
+    float phase = uProgress * 6.28318;
+    float waveA = sin(p.x * 3.2 + uTime * 0.85 + phase);
+    float waveB = sin(p.y * 4.1 - uTime * 0.62);
+    float waveC = cos(p.z * 3.6 + uTime * 0.48 - phase);
+    float distortion = (waveA + waveB + waveC) / 3.0;
+    float breath = sin(uTime * 0.72) * 0.035;
+    p += normal * (distortion * (0.14 + uProgress * 0.18) + breath);
+    p.x *= 1.0 + sin(phase) * 0.18;
+    p.y *= 1.0 + cos(phase * 0.7) * 0.12;
 
-function seeded(index: number, salt: number) {
-  const value = Math.sin(index * 127.1 + salt * 311.7) * 43758.5453;
-  return value - Math.floor(value);
-}
-
-function targetForShape(
-  shape: number,
-  seed: PointSeed,
-  index: number,
-  time: number,
-): [number, number, number] {
-  const { a, b, c, radius } = seed;
-
-  switch (shape) {
-    case 0: {
-      const pulse = 1 + Math.sin(time * 0.9 + index * 0.08) * 0.035;
-      return [
-        Math.sin(a) * Math.cos(b) * radius * pulse,
-        Math.sin(b) * radius * pulse,
-        Math.cos(a) * Math.cos(b) * radius * pulse,
-      ];
-    }
-    case 1: {
-      const grid = Math.ceil(Math.sqrt(POINT_COUNT));
-      const column = index % grid;
-      const row = Math.floor(index / grid);
-      return [
-        (column / grid - 0.5) * 5.2,
-        (row / grid - 0.5) * 5.2,
-        Math.sin(column * 0.46 + time * 0.5) * 0.22,
-      ];
-    }
-    case 2:
-      return [
-        (a / (Math.PI * 2) - 0.5) * 6.2,
-        Math.sin(a * 2 + time * 0.55) * 1.5 + (b / Math.PI) * 0.5,
-        Math.cos(a * 1.5 + c) * 1.25,
-      ];
-    case 3: {
-      const t = index / POINT_COUNT;
-      const angle = t * Math.PI * 13 + time * 0.18;
-      return [
-        Math.cos(angle) * (1.15 + c),
-        (t - 0.5) * 6,
-        Math.sin(angle) * (1.15 + c),
-      ];
-    }
-    case 4: {
-      const major = 2.05 + Math.cos(b * 3) * 0.22;
-      return [
-        (major + Math.cos(b) * 0.55) * Math.cos(a),
-        Math.sin(b) * 0.55,
-        (major + Math.cos(b) * 0.55) * Math.sin(a),
-      ];
-    }
-    default: {
-      const tightRadius = 0.35 + c * 0.7;
-      return [
-        Math.sin(a) * Math.cos(b) * tightRadius,
-        Math.sin(b) * tightRadius,
-        Math.cos(a) * Math.cos(b) * tightRadius,
-      ];
-    }
+    vec4 worldPosition = modelMatrix * vec4(p, 1.0);
+    vNormal = normalize(normalMatrix * normal);
+    vPosition = worldPosition.xyz;
+    vDistortion = distortion;
+    gl_Position = projectionMatrix * viewMatrix * worldPosition;
   }
-}
+`;
 
-function CorePoints({
-  color,
+const fragmentShader = `
+  uniform vec3 uColorA;
+  uniform vec3 uColorB;
+  uniform float uTime;
+  varying vec3 vNormal;
+  varying vec3 vPosition;
+  varying float vDistortion;
+
+  void main() {
+    vec3 viewDirection = normalize(cameraPosition - vPosition);
+    float fresnel = pow(1.0 - abs(dot(viewDirection, vNormal)), 2.6);
+    float scan = smoothstep(0.42, 0.58, sin(vPosition.y * 16.0 - uTime * 1.8) * 0.5 + 0.5);
+    vec3 color = mix(uColorA, uColorB, fresnel + vDistortion * 0.22);
+    color += scan * uColorB * 0.12;
+    float alpha = 0.12 + fresnel * 0.72 + scan * 0.06;
+    gl_FragColor = vec4(color, alpha);
+  }
+`;
+
+function KineticObject({
+  primary,
+  secondary,
   reducedMotion,
 }: {
-  color: string;
+  primary: string;
+  secondary: string;
   reducedMotion: boolean;
 }) {
-  const pointsRef = useRef<THREE.Points>(null);
   const groupRef = useRef<THREE.Group>(null);
-  const scrollProgress = useRef(0);
-  const mouse = useRef({ x: 0, y: 0 });
+  const shellRef = useRef<THREE.Mesh>(null);
+  const materialRef = useRef<THREE.ShaderMaterial>(null);
+  const orbitRef = useRef<THREE.Group>(null);
+  const progress = useRef(0);
+  const pointer = useRef({ x: 0, y: 0 });
 
-  const seeds = useMemo<PointSeed[]>(
-    () =>
-      Array.from({ length: POINT_COUNT }, (_, index) => ({
-        a: seeded(index, 1) * Math.PI * 2,
-        b: (seeded(index, 2) - 0.5) * Math.PI,
-        c: seeded(index, 3),
-        radius: 1.15 + seeded(index, 4) * 1.35,
-      })),
-    [],
+  const uniforms = useMemo(
+    () => ({
+      uTime: { value: 0 },
+      uProgress: { value: 0 },
+      uColorA: { value: new THREE.Color(primary) },
+      uColorB: { value: new THREE.Color(secondary) },
+    }),
+    [primary, secondary],
   );
 
-  const positions = useMemo(() => {
-    const array = new Float32Array(POINT_COUNT * 3);
-    seeds.forEach((seed, index) => {
-      const [x, y, z] = targetForShape(0, seed, index, 0);
-      array[index * 3] = x;
-      array[index * 3 + 1] = y;
-      array[index * 3 + 2] = z;
-    });
-    return array;
-  }, [seeds]);
-
   useEffect(() => {
-    function updateScroll() {
-      const available = document.documentElement.scrollHeight - window.innerHeight;
-      scrollProgress.current = available > 0 ? window.scrollY / available : 0;
+    function updateProgress() {
+      const available =
+        document.documentElement.scrollHeight - window.innerHeight;
+      progress.current = available > 0 ? window.scrollY / available : 0;
     }
 
     function updatePointer(event: PointerEvent) {
-      mouse.current.x = (event.clientX / window.innerWidth - 0.5) * 2;
-      mouse.current.y = (event.clientY / window.innerHeight - 0.5) * 2;
+      pointer.current.x = event.clientX / window.innerWidth - 0.5;
+      pointer.current.y = event.clientY / window.innerHeight - 0.5;
     }
 
-    updateScroll();
-    window.addEventListener("scroll", updateScroll, { passive: true });
+    updateProgress();
+    window.addEventListener("scroll", updateProgress, { passive: true });
     window.addEventListener("pointermove", updatePointer, { passive: true });
     return () => {
-      window.removeEventListener("scroll", updateScroll);
+      window.removeEventListener("scroll", updateProgress);
       window.removeEventListener("pointermove", updatePointer);
     };
   }, []);
 
   useFrame(({ clock }, delta) => {
-    const points = pointsRef.current;
     const group = groupRef.current;
-    if (!points || !group) return;
+    const shell = shellRef.current;
+    const material = materialRef.current;
+    const orbit = orbitRef.current;
+    if (!group || !shell || !material || !orbit) return;
 
     const time = reducedMotion ? 0 : clock.elapsedTime;
-    const scaled = Math.min(scrollProgress.current * SHAPE_COUNT, SHAPE_COUNT - 1);
-    const currentShape = Math.floor(scaled);
-    const nextShape = Math.min(currentShape + 1, SHAPE_COUNT - 1);
-    const mix = THREE.MathUtils.smoothstep(scaled - currentShape, 0, 1);
-    const attribute = points.geometry.attributes.position;
-    const positionArray = attribute.array as Float32Array;
-
-    for (let index = 0; index < POINT_COUNT; index += 1) {
-      const from = targetForShape(
-        currentShape,
-        seeds[index],
-        index,
-        time,
-      );
-      const to = targetForShape(nextShape, seeds[index], index, time);
-      const offset = index * 3;
-      const speed = Math.min(delta * 3.4, 1);
-
-      positionArray[offset] = THREE.MathUtils.lerp(
-        positionArray[offset],
-        THREE.MathUtils.lerp(from[0], to[0], mix),
-        speed,
-      );
-      positionArray[offset + 1] = THREE.MathUtils.lerp(
-        positionArray[offset + 1],
-        THREE.MathUtils.lerp(from[1], to[1], mix),
-        speed,
-      );
-      positionArray[offset + 2] = THREE.MathUtils.lerp(
-        positionArray[offset + 2],
-        THREE.MathUtils.lerp(from[2], to[2], mix),
-        speed,
-      );
-    }
-
-    attribute.needsUpdate = true;
-    const pointerFactor = reducedMotion ? 0 : 0.12;
-    group.rotation.y = THREE.MathUtils.lerp(
-      group.rotation.y,
-      time * 0.035 + mouse.current.x * pointerFactor,
-      0.04,
+    const targetProgress = progress.current;
+    material.uniforms.uTime.value = time;
+    material.uniforms.uProgress.value = THREE.MathUtils.lerp(
+      material.uniforms.uProgress.value,
+      targetProgress,
+      Math.min(delta * 2.4, 1),
     );
+    material.uniforms.uColorA.value.lerp(new THREE.Color(primary), 0.06);
+    material.uniforms.uColorB.value.lerp(new THREE.Color(secondary), 0.06);
+
+    const pointerStrength = reducedMotion ? 0 : 0.45;
     group.rotation.x = THREE.MathUtils.lerp(
       group.rotation.x,
-      mouse.current.y * pointerFactor,
-      0.04,
+      -pointer.current.y * pointerStrength + targetProgress * 1.8,
+      0.035,
     );
+    group.rotation.y = THREE.MathUtils.lerp(
+      group.rotation.y,
+      pointer.current.x * pointerStrength + time * 0.08,
+      0.035,
+    );
+    group.rotation.z = targetProgress * Math.PI * 1.2;
+
+    const pulse = 1 + Math.sin(time * 0.55) * 0.025;
+    group.scale.setScalar(pulse);
+    shell.rotation.y = -time * 0.12;
+    shell.rotation.x = time * 0.07;
+    orbit.rotation.z = time * 0.045;
+    orbit.rotation.y = targetProgress * Math.PI;
   });
 
   return (
     <group ref={groupRef}>
-      <points ref={pointsRef}>
-        <bufferGeometry>
-          <bufferAttribute
-            attach="attributes-position"
-            args={[positions, 3]}
-          />
-        </bufferGeometry>
-        <pointsMaterial
-          color={color}
-          size={0.034}
-          sizeAttenuation
+      <mesh>
+        <icosahedronGeometry args={[2.18, 5]} />
+        <shaderMaterial
+          ref={materialRef}
+          uniforms={uniforms}
+          vertexShader={vertexShader}
+          fragmentShader={fragmentShader}
           transparent
-          opacity={0.88}
           depthWrite={false}
+          side={THREE.DoubleSide}
           blending={THREE.AdditiveBlending}
         />
-      </points>
-      <CoreRings color={color} reducedMotion={reducedMotion} />
+      </mesh>
+
+      <mesh ref={shellRef} scale={1.055}>
+        <icosahedronGeometry args={[2.18, 2]} />
+        <meshBasicMaterial
+          color={primary}
+          wireframe
+          transparent
+          opacity={0.15}
+          depthWrite={false}
+        />
+      </mesh>
+
+      <OrbitSystem ref={orbitRef} color={secondary} />
+      <ParticleHalo color={primary} />
     </group>
   );
 }
 
-function CoreRings({
+const OrbitSystem = ({
   color,
-  reducedMotion,
+  ref,
 }: {
   color: string;
-  reducedMotion: boolean;
-}) {
-  const ringRef = useRef<THREE.Group>(null);
-
-  useFrame(({ clock }) => {
-    if (!ringRef.current || reducedMotion) return;
-    ringRef.current.rotation.z = clock.elapsedTime * 0.055;
-    ringRef.current.rotation.x = Math.sin(clock.elapsedTime * 0.2) * 0.18;
-  });
-
-  const linePoints = useMemo(
+  ref: React.Ref<THREE.Group>;
+}) => {
+  const rings = useMemo(
     () =>
-      Array.from({ length: 48 }, (_, index) => {
-        const angle = (index / 47) * Math.PI * 2;
-        return new THREE.Vector3(
-          Math.cos(angle) * 2.9,
-          Math.sin(angle) * 2.9,
-          Math.sin(angle * 3) * 0.08,
-        );
-      }),
+      [2.85, 3.25, 3.72].map((radius, ringIndex) =>
+        Array.from({ length: 96 }, (_, index) => {
+          const angle = (index / 95) * Math.PI * 2;
+          return new THREE.Vector3(
+            Math.cos(angle) * radius,
+            Math.sin(angle) * radius,
+            Math.sin(angle * (ringIndex + 2)) * 0.14,
+          );
+        }),
+      ),
     [],
   );
 
   return (
-    <group ref={ringRef}>
+    <group ref={ref}>
+      <Line points={rings[0]} color={color} lineWidth={0.65} opacity={0.38} transparent />
       <Line
-        points={linePoints}
+        points={rings[1]}
         color={color}
-        lineWidth={0.5}
+        lineWidth={0.35}
+        opacity={0.2}
         transparent
-        opacity={0.34}
+        rotation={[1.15, 0.2, 0.5]}
       />
-      <mesh rotation={[Math.PI / 2, 0, 0]}>
-        <torusGeometry args={[2.55, 0.006, 8, 160]} />
-        <meshBasicMaterial color={color} transparent opacity={0.26} />
-      </mesh>
-      <mesh rotation={[Math.PI / 2.55, 0.3, 0]}>
-        <torusGeometry args={[1.82, 0.008, 8, 140]} />
-        <meshBasicMaterial color={color} transparent opacity={0.16} />
-      </mesh>
+      <Line
+        points={rings[2]}
+        color={color}
+        lineWidth={0.25}
+        opacity={0.14}
+        transparent
+        rotation={[0.4, 1.05, 0.2]}
+      />
     </group>
   );
-}
+};
 
-function Scene({
-  color,
-  secondary,
-  reducedMotion,
-}: {
-  color: string;
-  secondary: string;
-  reducedMotion: boolean;
-}) {
+function ParticleHalo({ color }: { color: string }) {
+  const positions = useMemo(() => {
+    const result = new Float32Array(1000 * 3);
+    for (let index = 0; index < 1000; index += 1) {
+      const angle = index * 2.399963;
+      const radius = 2.8 + ((index * 37) % 100) / 100 * 2.2;
+      result[index * 3] = Math.cos(angle) * radius;
+      result[index * 3 + 1] =
+        (Math.sin(index * 12.9898) * 0.5 + 0.5 - 0.5) * 5.2;
+      result[index * 3 + 2] = Math.sin(angle) * radius * 0.42;
+    }
+    return result;
+  }, []);
+
   return (
-    <>
-      <ambientLight intensity={0.4} />
-      <Float
-        speed={reducedMotion ? 0 : 0.8}
-        rotationIntensity={reducedMotion ? 0 : 0.12}
-        floatIntensity={reducedMotion ? 0 : 0.18}
-      >
-        <CorePoints color={color} reducedMotion={reducedMotion} />
-        <mesh rotation={[0.65, 0.2, 0.5]}>
-          <octahedronGeometry args={[1.1, 0]} />
-          <meshBasicMaterial
-            color={secondary}
-            wireframe
-            transparent
-            opacity={0.12}
-          />
-        </mesh>
-      </Float>
-    </>
+    <points rotation={[0.15, 0, 0.25]}>
+      <bufferGeometry>
+        <bufferAttribute attach="attributes-position" args={[positions, 3]} />
+      </bufferGeometry>
+      <pointsMaterial
+        color={color}
+        size={0.018}
+        transparent
+        opacity={0.4}
+        depthWrite={false}
+        blending={THREE.AdditiveBlending}
+      />
+    </points>
   );
 }
 
@@ -327,27 +278,31 @@ export function DigitalCore() {
     };
   }, []);
 
-  const color = theme === "dark" ? "#ccef54" : "#355f40";
-  const secondary = theme === "dark" ? "#66a8ff" : "#bd5e38";
+  const primary = theme === "dark" ? "#eef3ff" : "#11182b";
+  const secondary = theme === "dark" ? "#346cff" : "#1645d8";
 
   return (
     <div className="digital-core" aria-hidden="true">
-      <div className="digital-core__hud">
-        <span>CORE / 01</span>
-        <span>SCROLL LINKED</span>
+      <div className="digital-core__readout digital-core__readout--left">
+        <span>EF / KINETIC OBJECT</span>
+        <span>REALTIME WEBGL</span>
+      </div>
+      <div className="digital-core__readout digital-core__readout--right">
+        <span>POINTER / SCROLL</span>
+        <span>2026.06</span>
       </div>
       {supported ? (
         <Canvas
-          dpr={[1, 1.5]}
-          camera={{ position: [0, 0, 7.8], fov: 42 }}
+          dpr={[1, 1.65]}
+          camera={{ position: [0, 0, 9.2], fov: 42 }}
           gl={{
             antialias: true,
             alpha: true,
             powerPreference: "high-performance",
           }}
         >
-          <Scene
-            color={color}
+          <KineticObject
+            primary={primary}
             secondary={secondary}
             reducedMotion={reducedMotion}
           />

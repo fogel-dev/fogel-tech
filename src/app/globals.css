@@ -1,0 +1,217 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-card-foreground: var(--foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-border: var(--border);
+  --color-ring: var(--ring);
+  --font-sans: var(--font-geist);
+  --font-mono: var(--font-geist-mono);
+}
+
+:root {
+  --background: #ede9df;
+  --foreground: #161711;
+  --surface: rgba(247, 244, 235, 0.72);
+  --popover: #f7f4eb;
+  --primary: #171912;
+  --primary-foreground: #f8f6ef;
+  --muted-foreground: #68695f;
+  --accent: #375d42;
+  --border: rgba(22, 23, 17, 0.15);
+  --ring: #5e8a64;
+  --scene-primary: #355f40;
+  --scene-secondary: #bd5e38;
+  --grid-color: rgba(22, 23, 17, 0.07);
+  --radius-xl: 1.5rem;
+  --shadow-card: 0 24px 70px rgba(48, 42, 31, 0.08);
+  --shadow-nav: 0 10px 40px rgba(48, 42, 31, 0.08);
+  --shadow-button: 0 12px 30px rgba(29, 31, 24, 0.14);
+  --duration-fast: 180ms;
+  --duration-medium: 420ms;
+}
+
+:root[data-theme="dark"] {
+  --background: #080a09;
+  --foreground: #eeefe9;
+  --surface: rgba(18, 21, 19, 0.66);
+  --popover: #131614;
+  --primary: #d6ff4b;
+  --primary-foreground: #11140a;
+  --muted-foreground: #92978f;
+  --accent: #bada45;
+  --border: rgba(238, 239, 233, 0.13);
+  --ring: #d6ff4b;
+  --scene-primary: #ccef54;
+  --scene-secondary: #66a8ff;
+  --grid-color: rgba(238, 239, 233, 0.055);
+  --shadow-card: 0 30px 100px rgba(0, 0, 0, 0.36);
+  --shadow-nav: 0 10px 50px rgba(0, 0, 0, 0.32);
+  --shadow-button: 0 0 34px rgba(214, 255, 75, 0.14);
+}
+
+* {
+  border-color: var(--border);
+}
+
+html {
+  scroll-behavior: smooth;
+  background: var(--background);
+}
+
+body {
+  min-width: 320px;
+  overflow-x: hidden;
+  background:
+    linear-gradient(var(--grid-color) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-color) 1px, transparent 1px),
+    var(--background);
+  background-size: 5rem 5rem;
+  color: var(--foreground);
+  transition:
+    background-color var(--duration-medium),
+    color var(--duration-medium);
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--background);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--background);
+}
+
+::-webkit-scrollbar-thumb {
+  border: 2px solid var(--background);
+  border-radius: 999px;
+  background: var(--muted-foreground);
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+::view-transition-old(root) {
+  z-index: 0;
+}
+
+::view-transition-new(root) {
+  z-index: 1;
+}
+
+.site-noise {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  pointer-events: none;
+  opacity: 0.028;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.9'/%3E%3C/svg%3E");
+}
+
+.page-shell {
+  width: min(100% - 2rem, 96rem);
+  margin-inline: auto;
+}
+
+.section-pad {
+  padding-block: clamp(7rem, 14vw, 13rem);
+}
+
+.reveal-line {
+  display: block;
+  overflow: hidden;
+}
+
+.reveal-line > span {
+  display: block;
+}
+
+.project-visual {
+  color: var(--scene-primary);
+  background:
+    radial-gradient(circle at var(--pointer-x, 60%) var(--pointer-y, 30%), color-mix(in srgb, var(--scene-primary) 20%, transparent), transparent 28%),
+    color-mix(in srgb, var(--surface) 88%, transparent);
+}
+
+.project-visual--atlas {
+  color: var(--scene-secondary);
+}
+
+.project-visual--flow {
+  color: color-mix(in srgb, var(--scene-primary) 45%, var(--scene-secondary));
+}
+
+.project-grid {
+  opacity: 0.5;
+  background-image:
+    linear-gradient(currentColor 1px, transparent 1px),
+    linear-gradient(90deg, currentColor 1px, transparent 1px);
+  background-size: 2rem 2rem;
+  mask-image: radial-gradient(circle, black, transparent 70%);
+}
+
+.project-orbit {
+  box-shadow:
+    0 0 0 2rem color-mix(in srgb, currentColor 4%, transparent),
+    0 0 0 5rem color-mix(in srgb, currentColor 3%, transparent);
+  transition: transform 700ms cubic-bezier(.2,.8,.2,1);
+}
+
+.project-card:hover .project-orbit {
+  transform: translate(-50%, -50%) rotate(35deg) scale(1.08);
+}
+
+.project-core {
+  box-shadow: 0 0 60px color-mix(in srgb, currentColor 22%, transparent);
+  transition: transform 600ms cubic-bezier(.2,.8,.2,1);
+}
+
+.project-card:hover .project-core {
+  transform: translate(-50%, -50%) rotate(125deg) scale(0.84);
+}
+
+.marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 32s linear infinite;
+}
+
+.marquee:hover {
+  animation-play-state: paused;
+}
+
+@keyframes marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
